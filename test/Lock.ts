@@ -60,12 +60,13 @@ describe("Vote", function () {
 
  it('shold vote For', async function () {
      const {vote, user1} = await loadFixture(deploy);
+     const  sum = 1;
      const proposalId = 0;
      const proposal = "Test proposla";
      const block = await ethers.provider.getBlock("latest");
      await vote._createProposal(proposal,  block?.timestamp+301 , block?.timestamp+331);
      await time.increase(316);
-     await vote.voteFor(proposalId);
+     await vote.voteFor(proposalId, { value: sum });
      const _proposal = await vote.getProposal(0);
      expect(_proposal.positiveVotes).to.eq(1);
      expect(await vote.hasVoted(proposalId,user1)).to.eq(true);
@@ -93,22 +94,24 @@ describe("Vote", function () {
  it('should faild hasVoted', async function() {
      const {vote, user1} = await loadFixture(deploy);
      const proposalId = 0;
+     const  sum = 1;
      const proposal = "Test proposla";
      const block = await ethers.provider.getBlock("latest");
      await vote._createProposal(proposal,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
-     await vote.voteFor(proposalId);
+     await vote.voteFor(proposalId, { value: sum });
      await expect(vote.voteFor(proposalId)).to.revertedWith("Already voted");
     });
 
  it('shold vote Against', async function () {
      const {vote, user1} = await loadFixture(deploy);
      const proposalId = 0;
+     const sum =1;
      const proposal = "Test proposla";
      const block = await ethers.provider.getBlock("latest");
      await vote._createProposal(proposal,  block?.timestamp+301 , block?.timestamp+331);
      await time.increase(316);
-     await vote.voteAgainst(proposalId);
+     await vote.voteAgainst(proposalId, { value: sum });
      const _proposal = await vote.getProposal(0);
      expect(_proposal.negativeVotes).to.eq(1);
      expect(await vote.hasVoted(proposalId,user1)).to.eq(true);
@@ -133,27 +136,29 @@ describe("Vote", function () {
      await expect(vote.voteAgainst(proposalId)).to.revertedWith("The voting has already ended");
     });
 
- it('should faild hasVoted', async function() {
+ it('should faild hasVoted voteAgainst', async function() {
      const {vote} = await loadFixture(deploy);
      const proposalId = 0;
+     const sum = 1;
      const proposal = "Test proposla";
      const block = await ethers.provider.getBlock("latest");
      await vote._createProposal(proposal,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
-     await vote.voteAgainst(proposalId);
-     await expect(vote.voteAgainst(proposalId)).to.revertedWith("Already voted");
+     await vote.voteAgainst(proposalId, { value: sum });
+     await expect(vote.voteAgainst(proposalId), { value: sum }).to.revertedWith("Already voted");
     });
 
  it('one user two proposal', async function() {
      const {vote, user1} = await loadFixture(deploy);
      const proposal1 = "Test";
      const proposal2 = "proposla"
+     const sum = 1;
      const block = await ethers.provider.getBlock("latest");
      await vote._createProposal(proposal1,  block?.timestamp+401 , block?.timestamp+431);
      await vote._createProposal(proposal2,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
-     await vote.voteAgainst(0);
-     await vote.voteFor(1);
+     await vote.voteAgainst(0, { value: sum });
+     await vote.voteFor(1, { value: sum });
      const _proposal1 = await vote.getProposal(0);
      const _proposal2 = await vote.getProposal(1);
      expect(_proposal1.negativeVotes).to.eq(1);
@@ -165,11 +170,12 @@ describe("Vote", function () {
  it('two user one proposal', async function() {
      const {vote, user1, user2} = await loadFixture(deploy);
      const proposal = "Test";
+    const sum = 1;
      const block = await ethers.provider.getBlock("latest");
      await vote._createProposal(proposal,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
-     await vote.connect(user1).voteAgainst(0);
-     await vote.connect(user2).voteFor(0);
+     await vote.connect(user1).voteAgainst(0,{ value: sum });
+     await vote.connect(user2).voteFor(0,{ value: sum });
      const _proposal = await vote.getProposal(0);
      expect(await vote.hasVoted(0,user1)).to.eq(true);
      expect(await vote.hasVoted(0,user2)).to.eq(true);
@@ -181,14 +187,15 @@ describe("Vote", function () {
      const {vote, user1, user2} = await loadFixture(deploy);
      const proposal1 = "Test";
      const proposal2 = "proposal";
+     const sum = 1;
      const block = await ethers.provider.getBlock("latest");
      await vote._createProposal(proposal1,  block?.timestamp+401 , block?.timestamp+431);
      await vote._createProposal(proposal2,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
-     await vote.connect(user1).voteAgainst(0);
-     await vote.connect(user1).voteAgainst(1);
-     await vote.connect(user2).voteFor(0);
-     await vote.connect(user2).voteAgainst(1);
+     await vote.connect(user1).voteAgainst(0,{ value: sum });
+     await vote.connect(user1).voteAgainst(1,{ value: sum });
+     await vote.connect(user2).voteFor(0,{ value: sum });
+     await vote.connect(user2).voteAgainst(1, { value: sum });
      const _proposal1 = await vote.getProposal(0);
      const _proposal2 = await vote.getProposal(1);
      expect(await vote.hasVoted(0,user1)).to.eq(true);
