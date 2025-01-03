@@ -1,6 +1,7 @@
 import {loadFixture, ethers, expect, HardhatEthersSigner, time} from "./setup";
 import {artifacts} from "hardhat";
 import {Vote} from "../typechain-types";
+import {bigint} from "hardhat/internal/core/params/argumentTypes";
 
 
 describe("Vote", function () {
@@ -14,7 +15,7 @@ describe("Vote", function () {
      await vote.waitForDeployment();
      const  [user1, user2] = await ethers.getSigners();
 
-     return { user1, user2, vote }
+     return { user1, user2,vote}
  }
  it("should be deployed", async function() {
      const {vote} = await loadFixture(deploy);
@@ -207,4 +208,53 @@ describe("Vote", function () {
      expect(_proposal2.positiveVotes).to.eq(0);
      expect(_proposal2.negativeVotes).to.eq(2);
     });
+
+ it("should be change balance after vote", async function() {
+     const {vote, user1} = await loadFixture(deploy);
+     const sum = 1000; // wei
+     const block = await ethers.provider.getBlock("latest");
+     await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
+     await time.increase(415);
+     const tx = await vote.connect(user1).voteFor(0,{ value: sum});
+     tx.wait(1);
+     const _proposal = await vote.getProposal(0);
+     await expect(tx).to.changeEtherBalance(user1, -sum);
+     expect(await vote.hasVoted(0,user1)).to.eq(true);
+     expect(_proposal.positiveVotes).to.eq(sum);
+ });
+
+ it("should be faild if payment < 1", async function() {
+     const {vote, user1} = await loadFixture(deploy);
+     const block = await ethers.provider.getBlock("latest");
+     await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
+     await time.increase(415);
+     await expect(vote.connect(user1).voteFor(0,{ value: 0})).to.be.revertedWith("Payment must be greater than 0");
+    });
+
+ it("should be faild if non-ownwer tries ti withdraw", async function() {
+     const {vote, user2} = await loadFixture(deploy);
+     const block = await ethers.provider.getBlock("latest");
+     await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
+     await time.increase(415);
+     await expect(vote.connect(user2).withdraw()).to.be.revertedWithCustomError(vote, "OwnableUnauthorizedAccount");
+    });
+
+ it("should be change balanc owner after withdraw function", async function() {
+     const {vote, user1, user2} = await loadFixture(deploy);
+     const block = await ethers.provider.getBlock("latest");
+     const sum = 3000000;
+     await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
+     await time.increase(415);
+     expect(await vote.connect(user2).voteFor(0, { value: sum})).to.changeEtherBalance(user2, -sum);
+     await ethers.provider.getBalance(vote.getAddress());
+     await expect (vote.connect(user1).withdraw()).to.changeEtherBalance(user1, sum);
+     expect( await ethers.provider.getBalance(vote.getAddress())).to.equal(0);
+ });
+
+ it("should fail if withdraw fails to send Ether", async function () {
+     const { vote, user1} = await loadFixture(deploy);
+     const contractBalance = await ethers.provider.getBalance(vote.getAddress());
+     expect(contractBalance).to.equal(0);
+     await expect(vote.withdraw()).to.be.revertedWith("Failed to send Ether");
+     });
 });
