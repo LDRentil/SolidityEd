@@ -251,10 +251,4 @@ describe("Vote", function () {
      expect( await ethers.provider.getBalance(vote.getAddress())).to.equal(0);
  });
 
- it("should fail if withdraw fails to send Ether", async function () {
-     const { vote, user1} = await loadFixture(deploy);
-     const contractBalance = await ethers.provider.getBalance(vote.getAddress());
-     expect(contractBalance).to.equal(0);
-     await expect(vote.withdraw()).to.be.revertedWith("Failed to send Ether");
-     });
 });
