@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 import "@openzeppelin/contracts/access/Ownable.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 contract Vote is Ownable(msg.sender){
 
 
@@ -28,23 +29,27 @@ contract Vote is Ownable(msg.sender){
         emit newProposal(id,_proposal,_startVoteTime,_endVoteTime);
     }
 
-    function voteFor(uint256 _proposalId) public payable{
-        _votes(_proposalId, true);
+    function voteFor(uint256 _proposalId,uint256 amount, address token) public payable{
+        _votes(_proposalId, true, amount, token);
     }
 
-    function voteAgainst(uint256 _proposalId) public payable{
-        _votes(_proposalId, false);
+    function voteAgainst(uint256 _proposalId, uint256 amount, address token) public payable{
+        _votes(_proposalId, false,amount, token);
     }
-    function _votes(uint256 _proposalId, bool _type) private {
+
+    function _votes(uint256 _proposalId, bool _type, uint256 amount, address token) private {
         itsVote memory _vote = votes[_proposalId];
         require(block.timestamp >= _vote.startVoteTime,"Voting has not started yet");
         require(block.timestamp < _vote.endVoteTime,"The voting has already ended");
         require(!hasVoted[_proposalId][msg.sender],"Already voted");
-        require(msg.value > 0, "Payment must be greater than 0");
+        require(amount > 0, "Payment must be equal 1 or greater");
+        require(token != address(0), "Token addresses are 0");
+        //require(amount % ERC20.decimals() == 0, "Only whole tokens are allowed");
+        ERC20(token).transferFrom( msg.sender, address(this), amount);
         if(!_type){
-            votes[_proposalId].negativeVoice=_vote.negativeVoice+msg.value;
+            votes[_proposalId].negativeVoice=_vote.negativeVoice+amount;
         } else{
-            votes[_proposalId].positiveVoice=_vote.positiveVoice+msg.value;
+            votes[_proposalId].positiveVoice=_vote.positiveVoice+amount;
         }
         hasVoted[_proposalId][msg.sender] = true;
     }
@@ -53,6 +58,7 @@ contract Vote is Ownable(msg.sender){
         (bool sent, ) = owner().call{value: address (this).balance}("");
         require(sent, "Failed to send Ether");
     }
+
 
     function getProposal(uint256 _proposalId) public view returns (
         string memory proposal,
