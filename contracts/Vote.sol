@@ -43,20 +43,25 @@ contract Vote is Ownable(msg.sender){
         require(block.timestamp < _vote.endVoteTime,"The voting has already ended");
         require(!hasVoted[_proposalId][msg.sender],"Already voted");
         require(amount > 0, "Payment must be equal 1 or greater");
-        require(token != address(0), "Token addresses are 0");
-        //require(amount % ERC20.decimals() == 0, "Only whole tokens are allowed");
+        require(token != address(0), "Token address cannot be zero");
+        require(amount % (10**ERC20(token).decimals()) == 0, "Only whole tokens are allowed");
         ERC20(token).transferFrom( msg.sender, address(this), amount);
         if(!_type){
-            votes[_proposalId].negativeVoice=_vote.negativeVoice+amount;
+            votes[_proposalId].negativeVoice=_vote.negativeVoice+amount/10**ERC20(token).decimals();
         } else{
-            votes[_proposalId].positiveVoice=_vote.positiveVoice+amount;
+            votes[_proposalId].positiveVoice=_vote.positiveVoice+amount/10**ERC20(token).decimals();
         }
         hasVoted[_proposalId][msg.sender] = true;
     }
 
-    function withdraw() external onlyOwner {
-        (bool sent, ) = owner().call{value: address (this).balance}("");
-        require(sent, "Failed to send Ether");
+    function withdraw(address token) external onlyOwner {
+        require(token != address(0), "Token address cannot be zero");
+
+        uint256 balance = ERC20(token).balanceOf(address(this));
+        require(balance > 0, "No tokens to withdraw");
+
+        bool success = ERC20(token).transfer(msg.sender, balance);
+        require(success, "Failed to send tokens");
     }
 
 

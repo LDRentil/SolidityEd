@@ -2,6 +2,7 @@ import {loadFixture, ethers, expect, HardhatEthersSigner, time} from "./setup";
 import {Vote} from "../typechain-types";
 import {RToken} from "../typechain-types";
 
+
 describe("Vote", function () {
  async function deploy(): Promise<{
      user1:HardhatEthersSigner;
@@ -76,15 +77,15 @@ describe("Vote", function () {
  it('shold vote For', async function () {
      const {vote, user1, rt} = await loadFixture(deploy);
 
-     await rt.mint(user1.address, 1);
-     await rt.connect(user1).approve(vote.getAddress(), 1);
+     await rt.mint(user1.address,ethers.parseEther("1.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("1.0"));
 
      const proposal = "Test proposla";
      const block = await ethers.provider.getBlock("latest");
      await vote._createProposal(proposal,  block?.timestamp+301 , block?.timestamp+331);
 
      await time.increase(316);
-     await vote.voteFor(0, 1, rt.getAddress());
+     await vote.voteFor(0, ethers.parseEther("1.0"), rt.getAddress());
 
      const _proposal = await vote.getProposal(0);
 
@@ -95,15 +96,15 @@ describe("Vote", function () {
  it('shold vote Against', async function () {
      const {vote, user1, rt} = await loadFixture(deploy);
 
-     await rt.mint(user1.address, 1);
-     await rt.connect(user1).approve(vote.getAddress(), 1);
+     await rt.mint(user1.address,ethers.parseEther("1.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("1.0"));
 
      const proposal = "Test proposla";
      const block = await ethers.provider.getBlock("latest");
      await vote._createProposal(proposal,  block?.timestamp+301 , block?.timestamp+331);
 
      await time.increase(316);
-     await vote.voteAgainst(0, 1, rt.getAddress());
+     await vote.voteAgainst(0, ethers.parseEther("1.0"), rt.getAddress());
 
      const _proposal = await vote.getProposal(0);
 
@@ -111,53 +112,68 @@ describe("Vote", function () {
      expect(await vote.hasVoted(0,user1)).to.eq(true);
     });
 
+ it('should faild because of not whole token', async function() {
+        const {vote, user1, rt} = await loadFixture(deploy);
+
+            await rt.mint(user1.address,ethers.parseEther("1.5"));
+            await rt.connect(user1).approve(vote.getAddress(),ethers.parseEther("1.5"));
+
+            const proposal = "Test proposla";
+            const block = await ethers.provider.getBlock("latest");
+            await vote._createProposal(proposal,  block?.timestamp+301 , block?.timestamp+331);
+
+            await time.increase(316);
+
+            await expect (vote.voteAgainst( 0, ethers.parseEther("1.5"),  rt.getAddress())).to.revertedWith("Only whole tokens are allowed");
+    });
+
  it('should faild Voting has not started yet', async function() {
      const {vote, user1, rt} = await loadFixture(deploy);
 
-     await rt.mint(user1.address, 1);
-     await rt.connect(user1).approve(vote.getAddress(), 1);
+     await rt.mint(user1.address,ethers.parseEther("1.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("1.0"));
 
      const proposal = "Test proposla";
      const block = await ethers.provider.getBlock("latest");
 
      await vote._createProposal(proposal,  block?.timestamp+401 , block?.timestamp+431);
-     await expect(vote.voteFor(0, 1, rt.getAddress())).to.revertedWith("Voting has not started yet");
+     await expect(vote.voteFor(0, ethers.parseEther("1.0"), rt.getAddress())).to.revertedWith("Voting has not started yet");
     });
 
  it('should faild The voting has already ended', async function() {
      const {vote, user1, rt} = await loadFixture(deploy);
 
-     await rt.mint(user1.address, 1);
-     await rt.connect(user1).approve(vote.getAddress(), 1);
+     await rt.mint(user1.address,ethers.parseEther("1.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("1.0"));
 
      const proposal = "Test proposla";
      const block = await ethers.provider.getBlock("latest");
 
      await vote._createProposal(proposal,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(500);
-     await expect(vote.voteFor(0, 1, rt.getAddress())).to.revertedWith("The voting has already ended");
+     await expect(vote.voteFor(0, ethers.parseEther("1.0"), rt.getAddress())).to.revertedWith("The voting has already ended");
     });
 
  it('should faild hasVoted', async function() {
      const {vote, user1, rt} = await loadFixture(deploy);
 
-     await rt.mint(user1.address, 1);
-     await rt.connect(user1).approve(vote.getAddress(), 1);
+     await rt.mint(user1.address,ethers.parseEther("1.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("1.0"));
 
      const proposal = "Test proposla";
      const block = await ethers.provider.getBlock("latest");
 
      await vote._createProposal(proposal,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
-     await vote.voteFor(0, 1, rt.getAddress());
-     await expect(vote.voteFor(0, 1, rt.getAddress())).to.revertedWith("Already voted");
+     await vote.voteFor(0, ethers.parseEther("1.0"), rt.getAddress());
+     await expect(vote.voteFor(0, ethers.parseEther("1.0"), rt.getAddress())).to.revertedWith("Already voted");
     });
 
  it('one user two proposal', async function() {
      const {vote, user1, rt} = await loadFixture(deploy);
 
-     await rt.mint(user1.address, 2);
-     await rt.connect(user1).approve(vote.getAddress(), 2);
+     await rt.mint(user1.address,ethers.parseEther("2.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("2.0"));
 
      const proposal1 = "Test";
      const proposal2 = "proposla"
@@ -167,8 +183,8 @@ describe("Vote", function () {
      await vote._createProposal(proposal2,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
 
-     await vote.voteAgainst(0, 1,rt.getAddress());
-     await vote.voteFor(1, 1,rt.getAddress());
+     await vote.voteAgainst(0, ethers.parseEther("1.0"),rt.getAddress());
+     await vote.voteFor(1, ethers.parseEther("1.0"),rt.getAddress());
 
      const _proposal1 = await vote.getProposal(0);
      const _proposal2 = await vote.getProposal(1);
@@ -182,10 +198,10 @@ describe("Vote", function () {
  it('two user one proposal', async function() {
      const {vote, user1, user2, rt} = await loadFixture(deploy);
 
-     await rt.mint(user1.address, 1);
-     await rt.connect(user1).approve(vote.getAddress(), 1);
-     await rt.mint(user2.address, 1);
-     await rt.connect(user2).approve(vote.getAddress(), 1);
+     await rt.mint(user1.address,ethers.parseEther("1.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("1.0"));
+     await rt.mint(user2.address,ethers.parseEther("1.0"));
+     await rt.connect(user2).approve(vote.getAddress(), ethers.parseEther("1.0"));
 
      const proposal = "Test";
      const block = await ethers.provider.getBlock("latest");
@@ -193,8 +209,8 @@ describe("Vote", function () {
      await vote._createProposal(proposal,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
 
-     await vote.connect(user1).voteAgainst(0,1,rt.getAddress());
-     await vote.connect(user2).voteFor(0,1,rt.getAddress());
+     await vote.connect(user1).voteAgainst(0,ethers.parseEther("1.0"),rt.getAddress());
+     await vote.connect(user2).voteFor(0,ethers.parseEther("1.0"),rt.getAddress());
 
      const _proposal = await vote.getProposal(0);
 
@@ -207,10 +223,10 @@ describe("Vote", function () {
  it('two user two proposal', async function() {
      const {vote, user1, user2, rt} = await loadFixture(deploy);
 
-     await rt.mint(user1.address, 2);
-     await rt.connect(user1).approve(vote.getAddress(), 2);
-     await rt.mint(user2.address, 2);
-     await rt.connect(user2).approve(vote.getAddress(), 2);
+     await rt.mint(user1.address,ethers.parseEther("2.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("2.0"));
+     await rt.mint(user2.address,ethers.parseEther("2.0"));
+     await rt.connect(user2).approve(vote.getAddress(), ethers.parseEther("2.0"));
 
      const proposal1 = "Test";
      const proposal2 = "proposal";
@@ -220,11 +236,11 @@ describe("Vote", function () {
      await vote._createProposal(proposal2,  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
 
-     await vote.connect(user1).voteAgainst(0,1, rt.getAddress());
-     await vote.connect(user1).voteAgainst(1,1, rt.getAddress());
+     await vote.connect(user1).voteAgainst(0,ethers.parseEther("1.0"), rt.getAddress());
+     await vote.connect(user1).voteAgainst(1,ethers.parseEther("1.0"), rt.getAddress());
 
-     await vote.connect(user2).voteFor(0,1, rt.getAddress());
-     await vote.connect(user2).voteAgainst(1, 1, rt.getAddress());
+     await vote.connect(user2).voteFor(0,ethers.parseEther("1.0"), rt.getAddress());
+     await vote.connect(user2).voteAgainst(1, ethers.parseEther("1.0"), rt.getAddress());
 
      const _proposal1 = await vote.getProposal(0);
      const _proposal2 = await vote.getProposal(1);
@@ -243,22 +259,22 @@ describe("Vote", function () {
  it("should be change balance after vote", async function() {
      const {vote, user1, rt} = await loadFixture(deploy);
 
-     await rt.mint(user1.address, 2);
-     await rt.connect(user1).approve(vote.getAddress(), 2);
-
+     await rt.mint(user1.address,ethers.parseEther("2.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("2.0"));
+     expect(await rt.balanceOf(user1.address)).to.eq(ethers.parseEther("2.0"));
      const block = await ethers.provider.getBlock("latest");
 
      await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
 
-     const tx = await vote.connect(user1).voteFor(0,1, rt.getAddress());
+     const tx = await vote.connect(user1).voteFor(0,ethers.parseEther("1.0"), rt.getAddress());
 
      const _proposal = await vote.getProposal(0);
-    // уточнить по проверки баланса токенов
+     expect(await rt.balanceOf(user1.address)).to.eq(ethers.parseEther("1.0"));
      await expect(tx).to.changeTokenBalances(
          rt,
          [user1, vote],
-         [-1, 1]);
+         [ethers.parseEther("-1.0"), ethers.parseEther("1.0")]);
      expect(await vote.hasVoted(0,user1)).to.eq(true);
      expect(_proposal.positiveVotes).to.eq(1);
  });
@@ -273,36 +289,82 @@ describe("Vote", function () {
      await expect(vote.connect(user1).voteFor(0,0, rt.getAddress())).to.be.revertedWith("Payment must be equal 1 or greater");
     });
 
- it("should be faild if non-ownwer tries ti withdraw", async function() {
-     const {vote, user2} = await loadFixture(deploy);
+ it("should be non-ownwer tries ti withdraw", async function() {
+     const {vote, user1, user2, rt} = await loadFixture(deploy);
+
+     await rt.mint(user2.address,ethers.parseEther("1.0"));
+     await rt.connect(user2).approve(vote.getAddress(), ethers.parseEther("1.0"));
 
      const block = await ethers.provider.getBlock("latest");
 
      await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
      await time.increase(415);
 
-     await expect(vote.connect(user2).withdraw()).to.be.revertedWithCustomError(vote, "OwnableUnauthorizedAccount");
+     await vote.connect(user2).voteFor(0, ethers.parseEther("1.0"), rt.getAddress());
+     await expect(vote.connect(user2).withdraw(rt.getAddress())).to.be.revertedWithCustomError(vote, "OwnableUnauthorizedAccount");
     });
-// уточнить как переводить токены
-//  it("should be change balanc owner after withdraw function", async function() {
-//      const {vote, user1, user2,rt} = await loadFixture(deploy);
-//
-//      await rt.mint(user2.address, 5);
-//      await rt.connect(user2).approve(vote.getAddress(), 5);
-//
-//      const block = await ethers.provider.getBlock("latest");
-//      await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
-//      await time.increase(415);
-//
-//      expect(await vote.connect(user2).voteFor(0,5,rt.getAddress())).to.changeTokenBalances(
-//          rt,
-//          [user1, vote],
-//          [-5, 5]);
-//      await expect (vote.connect(user1).withdraw()).to.changeTokenBalances(
-//          rt,
-//          [vote, user1],
-//          [-5, 5]);
-//      expect( await ethers.provider.getBalance(vote.getAddress())).to.equal(0);
-//  });
 
+ it("should be faild No tokens to withdraw", async function() {
+    const {vote, user1, rt} = await loadFixture(deploy);
+
+    const block = await ethers.provider.getBlock("latest");
+
+    await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
+    await time.increase(415);
+
+    await expect(vote.connect(user1).withdraw(rt.getAddress())).to.be.revertedWith("No tokens to withdraw");
+    });
+
+ it("should be change balanc owner after withdraw function", async function() {
+     const {vote, user1, user2,rt} = await loadFixture(deploy);
+
+     await rt.mint(user2.address,ethers.parseEther("5.0"));
+     await rt.connect(user2).approve(vote.getAddress(), ethers.parseEther("5.0"));
+
+     const block = await ethers.provider.getBlock("latest");
+     await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
+     await time.increase(415);
+
+     expect(await rt.balanceOf(user2.address)).to.eq(ethers.parseEther("5.0"));
+     expect(await rt.balanceOf(user1.address)).to.eq(ethers.parseEther("0.0"));
+     expect(await rt.balanceOf(vote.getAddress())).to.eq(ethers.parseEther("0.0"));
+     expect(await vote.connect(user2).voteFor(0,ethers.parseEther("5.0"),rt.getAddress())).to.changeTokenBalances(
+         rt,
+         [user1, vote],
+         [ethers.parseEther("-5.0"), ethers.parseEther("5.0")]);
+     expect(await rt.balanceOf(user2.address)).to.eq(ethers.parseEther("0.0"));
+     expect(await rt.balanceOf(vote.getAddress())).to.eq(ethers.parseEther("5.0"));
+     await expect (vote.connect(user1).withdraw(rt.getAddress())).to.changeTokenBalances(
+         rt,
+         [vote, user1],
+         [ethers.parseEther("-5.0"), ethers.parseEther("5.0")]);
+     expect(await rt.balanceOf(vote.getAddress())).to.eq(ethers.parseEther("0.0"));
+     expect(await rt.balanceOf(user1.address)).to.eq(ethers.parseEther("5.0"));
+ });
+
+ it("should be faild if token address =0 in vote", async function() {
+     const {vote, user1,rt} = await loadFixture(deploy);
+
+     await rt.mint(user1.address,ethers.parseEther("5.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("5.0"));
+
+     const block = await ethers.provider.getBlock("latest");
+     await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
+     await time.increase(415);
+     await expect(vote.voteFor(0,ethers.parseEther("5.0"),"0x0000000000000000000000000000000000000000")).to.revertedWith("Token address cannot be zero");
+    });
+
+ it("should be faild if token address =0 in withdraw", async function() {
+     const {vote, user1,rt} = await loadFixture(deploy);
+
+     await rt.mint(user1.address,ethers.parseEther("5.0"));
+     await rt.connect(user1).approve(vote.getAddress(), ethers.parseEther("5.0"));
+
+     const block = await ethers.provider.getBlock("latest");
+     await vote._createProposal("proposal1",  block?.timestamp+401 , block?.timestamp+431);
+     await time.increase(415);
+
+     await vote.voteFor(0,ethers.parseEther("5.0"),rt.getAddress());
+     await expect(vote.withdraw("0x0000000000000000000000000000000000000000")).to.revertedWith("Token address cannot be zero");
+    });
 });
